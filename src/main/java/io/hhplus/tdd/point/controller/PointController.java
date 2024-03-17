@@ -1,5 +1,7 @@
-package io.hhplus.tdd.point;
+package io.hhplus.tdd.point.controller;
 
+import io.hhplus.tdd.point.data.PointHistory;
+import io.hhplus.tdd.point.data.UserPoint;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,6 +17,13 @@ public class PointController {
      */
     @GetMapping("{id}")
     public UserPoint point(@PathVariable Long id) {
+        // 특정유저의 포인트를 조회한다고 하는데 id를 부여했어
+        // id가 userid라고 이해해도 되겠지?
+        // 동일한 id로 입력하려고 할떄 오류
+        // id로 insert update
+        // 엉뚱한 id로 select해서 실패하게 하는것
+        // id로 select 성공
+
         return new UserPoint(0L, 0L, 0L);
     }
 
