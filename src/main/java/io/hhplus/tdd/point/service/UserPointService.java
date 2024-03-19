@@ -2,22 +2,24 @@ package io.hhplus.tdd.point.service;
 
 import io.hhplus.tdd.exception.UserPointErrorResult;
 import io.hhplus.tdd.exception.UserPointException;
+import io.hhplus.tdd.point.data.PointHistory;
 import io.hhplus.tdd.point.data.UserPoint;
 import io.hhplus.tdd.point.repository.IUserPointRepository;
-import io.hhplus.tdd.point.repository.UserPointRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
-public class UserPointService {
+public class UserPointService implements IUserPointService{
 
     private final IUserPointRepository userPointRepository;
+    private final IPointHistoryService pointHistoryService;
 
-    private static Logger logger = LoggerFactory.getLogger(UserPointService.class);
-    public UserPointService(@Autowired(required = false) IUserPointRepository userPointRepository) {
+    public UserPointService(@Autowired(required = false) IUserPointRepository userPointRepository
+                          , @Autowired(required = false) IPointHistoryService pointHistoryService) {
         this.userPointRepository = userPointRepository;
+        this.pointHistoryService = pointHistoryService;
     }
 
     public UserPoint getUserPoint(Long id){
@@ -47,7 +49,6 @@ public class UserPointService {
         }
 
         UserPoint newUserPoint = userPointRepository.save(id,newAmount);
-        logger.debug(">>>>>>>>{}",newUserPoint.point());
         return newUserPoint;
 
     }
@@ -72,7 +73,14 @@ public class UserPointService {
             throw new UserPointException(UserPointErrorResult.NOT_ENOUGH_POINT);
         }
 
-        UserPoint newUserPoint = userPointRepository.save(id,resVal);
-        return newUserPoint;
+        return userPointRepository.save(id,resVal);
+    }
+
+    public List<PointHistory> getPointHistory(Long userId){
+        if(userId == null){
+            throw new UserPointException(UserPointErrorResult.WRONG_USER_ID);
+        }
+
+        return pointHistoryService.getPointHistory(userId);
     }
 }

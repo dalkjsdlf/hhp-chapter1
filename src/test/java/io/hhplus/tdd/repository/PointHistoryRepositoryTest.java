@@ -61,7 +61,7 @@ public class PointHistoryRepositoryTest {
         Long amount = 10000L;
 
         // when
-        PointHistory savedPointHistory    = pointHistoryRepository.insert(id,amount,TransactionType.CHARGE,System.currentTimeMillis());
+        PointHistory savedPointHistory    = pointHistoryRepository.insert(id,amount,TransactionType.CHARGE);
 
         // then
         // 저장이 잘 되었는지
@@ -75,9 +75,9 @@ public class PointHistoryRepositoryTest {
         Long id = 1L;
 
         // when
-        pointHistoryRepository.insert(id,10000L,TransactionType.CHARGE,System.currentTimeMillis());
-        pointHistoryRepository.insert(id,500L,TransactionType.USE,System.currentTimeMillis());
-        pointHistoryRepository.insert(id,1000L,TransactionType.CHARGE,System.currentTimeMillis());
+        pointHistoryRepository.insert(id,10000L,TransactionType.CHARGE);
+        pointHistoryRepository.insert(id,500L,TransactionType.USE);
+        pointHistoryRepository.insert(id,1000L,TransactionType.CHARGE);
 
         List<PointHistory> selectedPointHistoryByUserId = pointHistoryRepository.selectAllByUserId(id);
 

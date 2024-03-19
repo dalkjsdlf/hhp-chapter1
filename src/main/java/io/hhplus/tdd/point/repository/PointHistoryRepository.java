@@ -15,9 +15,9 @@ public class PointHistoryRepository implements IPointHistoryRepository{
     }
 
     @Override
-    public PointHistory insert(Long id, Long amount, TransactionType transactionType, Long updateMillis) {
+    public PointHistory insert(Long id, Long amount, TransactionType transactionType) {
         try {
-            return pointHistoryTable.insert(id,amount,transactionType,updateMillis);
+            return pointHistoryTable.insert(id,amount,transactionType,System.currentTimeMillis());
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }

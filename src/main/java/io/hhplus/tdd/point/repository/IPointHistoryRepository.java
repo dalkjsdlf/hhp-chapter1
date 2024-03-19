@@ -11,9 +11,7 @@ public interface IPointHistoryRepository {
     public PointHistory insert(
             Long id,
             Long amount,
-            TransactionType transactionType,
-            Long updateMillis
+            TransactionType transactionType
     );
-
     public List<PointHistory> selectAllByUserId(Long userId);
 }
