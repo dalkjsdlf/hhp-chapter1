@@ -58,10 +58,10 @@ public class ApiControllerAdvice extends ResponseEntityExceptionHandler {
                 .body(new ErrorResponse(errorResult.name(), errorResult.getMessage()));
     }
 
-//    @Getter
-//    @RequiredArgsConstructor
-//    static class ErrorResponse {
-//        private final String code;
-//        private final String message;
-//    }
+    @Getter
+    @RequiredArgsConstructor
+    static class ErrorResponse {
+        private final String code;
+        private final String message;
+    }
 }
