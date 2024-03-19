@@ -4,11 +4,15 @@ import io.hhplus.tdd.exception.UserPointErrorResult;
 import io.hhplus.tdd.exception.UserPointException;
 import io.hhplus.tdd.point.data.PointHistory;
 import io.hhplus.tdd.point.data.UserPoint;
+import io.hhplus.tdd.point.dto.PointHistoryResponseDto;
+import io.hhplus.tdd.point.dto.UserPointResponseDto;
 import io.hhplus.tdd.point.repository.IUserPointRepository;
+import org.apache.catalina.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class UserPointService implements IUserPointService{
@@ -22,7 +26,7 @@ public class UserPointService implements IUserPointService{
         this.pointHistoryService = pointHistoryService;
     }
 
-    public UserPoint getUserPoint(Long id){
+    public UserPointResponseDto getUserPoint(Long id){
 
         if(id == null){
             throw new UserPointException(UserPointErrorResult.WRONG_USER_ID);
@@ -32,11 +36,15 @@ public class UserPointService implements IUserPointService{
         if(userPoint == null){
             throw new UserPointException(UserPointErrorResult.USER_POINT_NOT_FOUND);
         }
-
-        return userPoint;
+        return UserPointResponseDto
+                .builder()
+                .id(userPoint.id())
+                .amount(userPoint.point())
+                .build();
+        //return userPoint;
     }
 
-    public UserPoint chargeUserPoint(Long id, Long amount){
+    public UserPointResponseDto chargeUserPoint(Long id, Long amount){
 
         if(amount == null || amount < 0){
             throw new UserPointException(UserPointErrorResult.WRONG_POINT_AMOUNT);
@@ -49,11 +57,15 @@ public class UserPointService implements IUserPointService{
         }
 
         UserPoint newUserPoint = userPointRepository.save(id,newAmount);
-        return newUserPoint;
+        return UserPointResponseDto
+                .builder()
+                .id(newUserPoint.id())
+                .amount(newUserPoint.point())
+                .build();
 
     }
 
-    public UserPoint useUserPoint(Long id, Long amount){
+    public UserPointResponseDto useUserPoint(Long id, Long amount){
 
         // 검사 함수
         if(amount == null || amount < 0){
@@ -73,14 +85,25 @@ public class UserPointService implements IUserPointService{
             throw new UserPointException(UserPointErrorResult.NOT_ENOUGH_POINT);
         }
 
-        return userPointRepository.save(id,resVal);
+        UserPoint savedUserPoint = userPointRepository.save(id,resVal);
+        return UserPointResponseDto
+                .builder()
+                .id(savedUserPoint.id())
+                .amount(savedUserPoint.point())
+                .build();
     }
 
-    public List<PointHistory> getPointHistory(Long userId){
+    public List<PointHistoryResponseDto> getPointHistory(Long userId){
         if(userId == null){
             throw new UserPointException(UserPointErrorResult.WRONG_USER_ID);
         }
 
-        return pointHistoryService.getPointHistory(userId);
+        List<PointHistory> pointHistoreis = pointHistoryService.getPointHistory(userId);
+        return pointHistoreis.stream().map(item->PointHistoryResponseDto
+                .builder()
+                .id(item.userId())
+                .amount(item.amount())
+                .type(item.type())
+                .build()).collect(Collectors.toList());
     }
 }

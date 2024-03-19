@@ -5,6 +5,9 @@ import io.hhplus.tdd.exception.UserPointErrorResult;
 import io.hhplus.tdd.exception.UserPointException;
 import io.hhplus.tdd.point.data.PointHistory;
 import io.hhplus.tdd.point.data.UserPoint;
+import io.hhplus.tdd.point.dto.PointHistoryResponseDto;
+import io.hhplus.tdd.point.dto.UserPointRequestDto;
+import io.hhplus.tdd.point.dto.UserPointResponseDto;
 import io.hhplus.tdd.point.enumdata.TransactionType;
 import io.hhplus.tdd.point.repository.IPointHistoryRepository;
 import io.hhplus.tdd.point.repository.IUserPointRepository;
@@ -79,17 +82,18 @@ public class UserPointServiceTest {
 
 //        UserPointRepositoryStub stubRepo = new UserPointRepositoryStub();
 //        PointHistoryServiceStub stupSvc  = new PointHistoryServiceStub();
+//
 //        stubRepo.setReturn(resultPoint);
 //        stupSvc.setResult(null);
 //
 //        userPointService = new UserPointService(stubRepo,stupSvc);
 
         // when
-        UserPoint userPoint = userPointService.getUserPoint(id);
+        UserPointResponseDto userPointDto = userPointService.getUserPoint(id);
 
         // then
-        assertThat(userPoint).isNotNull();
-        assertThat(userPoint.id()).isEqualTo(id);
+        assertThat(userPointDto).isNotNull();
+        assertThat(userPointDto.getId()).isEqualTo(id);
     }
     @DisplayName("[실패] 사용자ID로 포인트 조회(ID 조회안됨)")
     @Test()
@@ -135,12 +139,13 @@ public class UserPointServiceTest {
 
         // when
         // DTO로 만들어?
-        UserPoint chargedUserPoint = userPointService.chargeUserPoint(id,amount);
+        UserPointResponseDto chargedUserPoint = userPointService.chargeUserPoint(id,amount);
+
 
         // then
         assertThat(chargedUserPoint).isNotNull();
-        assertThat(chargedUserPoint.id()).isEqualTo(id);
-        assertThat(chargedUserPoint.point()).isEqualTo(amount);
+        assertThat(chargedUserPoint.getId()).isEqualTo(id);
+        assertThat(chargedUserPoint.getAmount()).isEqualTo(amount);
     }
 
     @DisplayName("[성공] 기 사용자로 포인트 충전 추가적립 - TODO 점검필요")
@@ -161,12 +166,12 @@ public class UserPointServiceTest {
 
         // when
         // DTO로 만들어?
-        UserPoint chargedUserPoint = userPointService.chargeUserPoint(id,newAmount);
+        UserPointResponseDto chargedUserPoint = userPointService.chargeUserPoint(id,newAmount);
 
         // then
         assertThat(chargedUserPoint).isNotNull();
-        assertThat(chargedUserPoint.id()).isEqualTo(id);
-        assertThat(chargedUserPoint.point()).isEqualTo(totalAmount);
+        assertThat(chargedUserPoint.getId()).isEqualTo(id);
+        assertThat(chargedUserPoint.getAmount()).isEqualTo(totalAmount);
     }
     @DisplayName("[실패] 충전값이 음수")
     @Test()
@@ -218,12 +223,12 @@ public class UserPointServiceTest {
 
         // when
         // DTO로 만들어?
-        UserPoint chargedUserPoint = userPointService.useUserPoint(id,newAmount);
+        UserPointResponseDto chargedUserPoint = userPointService.useUserPoint(id,newAmount);
 
         // then
         assertThat(chargedUserPoint).isNotNull();
-        assertThat(chargedUserPoint.id()).isEqualTo(id);
-        assertThat(chargedUserPoint.point()).isEqualTo(resAmount);
+        assertThat(chargedUserPoint.getId()).isEqualTo(id);
+        assertThat(chargedUserPoint.getAmount()).isEqualTo(resAmount);
     }
     @DisplayName("[실패] 사용값이 음수")
     @Test()
@@ -289,7 +294,7 @@ public class UserPointServiceTest {
         doReturn(pointHistoryList).when(pointHistoryService).getPointHistory(id);
 
         // when
-        List<PointHistory> result = userPointService.getPointHistory(id);
+        List<PointHistoryResponseDto> result = userPointService.getPointHistory(id);
 
         // then
         assertThat(result).isNotNull();

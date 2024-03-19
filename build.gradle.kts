@@ -34,11 +34,12 @@ configurations {
 
 dependencies {
 	implementation(libs.spring.boot.starter.web)
+	implementation("org.springframework.boot:spring-boot-starter-validation")
 	annotationProcessor(libs.spring.boot.configuration.processor)
 	testImplementation(libs.spring.boot.starter.test)
-
 	compileOnly(libs.lombok)
 	annotationProcessor(libs.lombok)
+	implementation("com.google.code.gson:gson")
 }
 
 // bundling tasks
