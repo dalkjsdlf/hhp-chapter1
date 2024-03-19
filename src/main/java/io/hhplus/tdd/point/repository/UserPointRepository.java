@@ -7,7 +7,6 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-@Repository
 public class UserPointRepository implements IUserPointRepository{
 
     private UserPointTable userPointTable;
@@ -24,11 +23,20 @@ public class UserPointRepository implements IUserPointRepository{
     @Override
     public UserPoint selectById(Long id) {
 
-        return null;
+        try {
+            return userPointTable.selectById(id);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
     public UserPoint save(Long id, Long amount) {
-        return null;
+
+        try {
+            return userPointTable.insertOrUpdate(id, amount);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

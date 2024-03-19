@@ -1,13 +1,19 @@
 package io.hhplus.tdd.repository;
 
+import io.hhplus.tdd.database.PointHistoryTable;
+import io.hhplus.tdd.database.UserPointTable;
 import io.hhplus.tdd.point.data.PointHistory;
 import io.hhplus.tdd.point.data.UserPoint;
 import io.hhplus.tdd.point.enumdata.TransactionType;
 import io.hhplus.tdd.point.repository.IPointHistoryRepository;
+import io.hhplus.tdd.point.repository.PointHistoryRepository;
+import io.hhplus.tdd.point.repository.UserPointRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.test.context.SpringBootTest;
 
 import java.util.List;
 
@@ -24,13 +30,14 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
  * 1)
  */
 @DisplayName("[Repository Test]")
-@DataJpaTest
+
 public class PointHistoryRepositoryTest {
 
-    private final IPointHistoryRepository pointHistoryRepository;
+    private IPointHistoryRepository pointHistoryRepository;
 
-    public PointHistoryRepositoryTest(@Autowired IPointHistoryRepository pointHistoryRepository) {
-        this.pointHistoryRepository = pointHistoryRepository;
+    @BeforeEach
+    public void beforeAction(){
+        pointHistoryRepository = new PointHistoryRepository(new PointHistoryTable());
     }
 
     @DisplayName("[성공 케이스] pointHistoryRepository not null 검사")
@@ -68,9 +75,9 @@ public class PointHistoryRepositoryTest {
         Long id = 1L;
 
         // when
-        PointHistory savedPointHistory1 = pointHistoryRepository.insert(id,10000L,TransactionType.CHARGE,System.currentTimeMillis());
-        PointHistory savedPointHistory2 = pointHistoryRepository.insert(id,500L,TransactionType.USE,System.currentTimeMillis());
-        PointHistory savedPointHistory3 = pointHistoryRepository.insert(id,1000L,TransactionType.CHARGE,System.currentTimeMillis());
+        pointHistoryRepository.insert(id,10000L,TransactionType.CHARGE,System.currentTimeMillis());
+        pointHistoryRepository.insert(id,500L,TransactionType.USE,System.currentTimeMillis());
+        pointHistoryRepository.insert(id,1000L,TransactionType.CHARGE,System.currentTimeMillis());
 
         List<PointHistory> selectedPointHistoryByUserId = pointHistoryRepository.selectAllByUserId(id);
 

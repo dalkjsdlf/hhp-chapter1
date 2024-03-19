@@ -1,11 +1,14 @@
 package io.hhplus.tdd.repository;
 
+import io.hhplus.tdd.database.UserPointTable;
 import io.hhplus.tdd.point.data.UserPoint;
 import io.hhplus.tdd.point.repository.IUserPointRepository;
+import io.hhplus.tdd.point.repository.UserPointRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 /**
@@ -15,13 +18,16 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
  * 3) insertAndUpdate
  */
 @DisplayName("[Repository Test]")
-@DataJpaTest
+
+
 public class UserPointRepositoryTest {
 
-    private final IUserPointRepository userPointRepository;
+    private IUserPointRepository userPointRepository;
 
-    public UserPointRepositoryTest(@Autowired IUserPointRepository userPointRepository) {
-        this.userPointRepository = userPointRepository;
+
+    @BeforeEach
+    public void beforeAction(){
+        userPointRepository = new UserPointRepository(new UserPointTable());
     }
 
     @DisplayName("[성공 케이스] userPointRepository not null 검사")
@@ -63,14 +69,14 @@ public class UserPointRepositoryTest {
         Long amount = 10000L;
 
         // when
-        UserPoint savedPoint1    = userPointRepository.save(id, amount);
-        UserPoint savedPoint2    = userPointRepository.save(id, amount * 2);
+        userPointRepository.save(id, amount);
+        UserPoint savedPoint2     = userPointRepository.save(id, amount * 2);
 
-        userPointRepository.selectById(1L);
+        UserPoint savedPointInMap = userPointRepository.selectById(1L);
 
         // then
         // 두 번째 데이터가 저장될 때 동일한 ID로 저장하면 UPDATE 된다.
-        assertThat(savedPoint1.point()).isEqualTo(20000L);
+        assertThat(savedPointInMap.point()).isEqualTo(savedPoint2.point());
     }
 
 

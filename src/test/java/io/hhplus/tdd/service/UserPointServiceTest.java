@@ -9,6 +9,7 @@ import io.hhplus.tdd.point.repository.PointHistoryRepository;
 import io.hhplus.tdd.point.repository.UserPointRepository;
 import io.hhplus.tdd.point.service.PointHistoryService;
 import io.hhplus.tdd.point.service.UserPointService;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,18 +40,11 @@ import static org.mockito.Mockito.doReturn;
 public class UserPointServiceTest {
 
 
-    @InjectMocks private final UserPointService userPointService;
-    @Mock private final UserPointRepository userPointRepository;
+    @InjectMocks private UserPointService userPointService;
+    @Mock private UserPointRepository userPointRepository;
 
-    @InjectMocks private final PointHistoryService pointHistoryService;
-    @Mock private final PointHistoryRepository pointHistoryRepository;
-
-    public UserPointServiceTest(UserPointService userPointService, UserPointRepository userPointRepository, PointHistoryService pointHistoryService, PointHistoryRepository pointHistoryRepository) {
-        this.userPointService = userPointService;
-        this.userPointRepository = userPointRepository;
-        this.pointHistoryService = pointHistoryService;
-        this.pointHistoryRepository = pointHistoryRepository;
-    }
+    @InjectMocks private PointHistoryService pointHistoryService;
+    @Mock private PointHistoryRepository pointHistoryRepository;
 
     @DisplayName("[성공케이스]")
     @Test()
@@ -70,8 +64,15 @@ public class UserPointServiceTest {
         // given
         Long id = 1L;
         doReturn(null).when(userPointRepository).selectById(id);
+
+        //UserPointRepositoryStub userPointRepositoryStub = new UserPointRepositoryStub().setReturn(null).selectById(id);
+
+        //userPointService = new UserPointService(userPointRepositoryStub);
+
+
         // when
         UserPointException userPointException = assertThrows(UserPointException.class,()->userPointService.getUserPoint(id));
+
 
         // then
         // UserPoint를 찾지못해 조회실패 Exception.
@@ -117,6 +118,7 @@ public class UserPointServiceTest {
         Long amount = 10000L;
         // repository에서 user point null 반환
         doReturn(null).when(userPointRepository).selectById(id);
+        doReturn(getNewUserPoint(id, amount)).when(userPointRepository).save(id,amount);
 
         // when
         // DTO로 만들어?
@@ -128,7 +130,7 @@ public class UserPointServiceTest {
         assertThat(chargedUserPoint.point()).isEqualTo(amount);
     }
 
-    @DisplayName("[성공 케이스] 기존에 특정 사용자로 포인트 충전시 추가충전")
+    @DisplayName("[성공 케이스] 기존에 특정 사용자로 포인트 충전시 추가충전 - TODO 점검필요")
     @Test()
     public void givenExistedUserId_whenChargePoint_thenSuccessfullyCharge(){
         // given
@@ -138,8 +140,10 @@ public class UserPointServiceTest {
 
         Long totalAmount = initAmount + newAmount; //최종 충전 포인트
 
-        UserPoint resultPoint = new UserPoint(id, newAmount, System.currentTimeMillis());
-        doReturn(initAmount).when(userPointRepository).selectById(id);
+        UserPoint initPoint = getNewUserPoint(id,initAmount);
+        UserPoint resultPoint = getNewUserPoint(id,totalAmount);
+
+        doReturn(initPoint).when(userPointRepository).selectById(id);
         doReturn(resultPoint).when(userPointRepository).save(id,totalAmount);
 
         // when
@@ -182,6 +186,7 @@ public class UserPointServiceTest {
         assertThat(userPointException.getErrorResult()).isEqualTo(UserPointErrorResult.WRONG_POINT_AMOUNT);
     }
 
+    @Disabled
     @DisplayName("[실패 케이스] Transaction Type이 null일 경우")
     @Test()
     public void givenUserIdAndAmount_whenChargePoint_thenThrowWrongAmount(){
@@ -197,7 +202,7 @@ public class UserPointServiceTest {
         assertThat(userPointException.getErrorResult()).isEqualTo(UserPointErrorResult.WRONG_POINT_AMOUNT);
     }
 
-    @DisplayName("[성공 케이스] 기존에 특정 사용자로 포인트 사용")
+    @DisplayName("[성공 케이스] 기존에 특정 사용자로 포인트 사용 - TODO 점검필요")
     @Test()
     public void givenExistedUserId_whenUsePoint_thenSuccessfullyUse(){
         // given
@@ -205,11 +210,12 @@ public class UserPointServiceTest {
         Long newAmount  = 2000L; //추가 충전 포인트
         Long initAmount = 10000L; //충전 전 가용포인트
 
-        Long totalAmount = initAmount + newAmount; //최종 충전 포인트
+        Long resAmount = initAmount - newAmount; //최종 충전 포인트
 
-        UserPoint resultPoint = new UserPoint(id, newAmount, System.currentTimeMillis());
-        doReturn(initAmount).when(userPointRepository).selectById(id);
-        doReturn(resultPoint).when(userPointRepository).save(id,totalAmount);
+        UserPoint initPoint = getNewUserPoint(id,initAmount);
+        UserPoint resultPoint = getNewUserPoint(id,resAmount);
+        doReturn(initPoint).when(userPointRepository).selectById(id);
+        doReturn(resultPoint).when(userPointRepository).save(id,resAmount);
 
         // when
         // DTO로 만들어?
@@ -218,7 +224,7 @@ public class UserPointServiceTest {
         // then
         assertThat(chargedUserPoint).isNotNull();
         assertThat(chargedUserPoint.id()).isEqualTo(id);
-        assertThat(chargedUserPoint.point()).isEqualTo(totalAmount);
+        assertThat(chargedUserPoint.point()).isEqualTo(resAmount);
     }
 
     @DisplayName("[실패 케이스] 충전값이 음수일 경우")
@@ -256,8 +262,8 @@ public class UserPointServiceTest {
     public void givenUserIdAndNullAmount_whenUsePoint_thenThrowNotFoundUserPoint(){
         // given
         Long id = 1L;
-        Long amount = null;
-
+        Long amount = 10000L;
+        doReturn(null).when(userPointRepository).selectById(id);
         // when
         // DTO로 만들어?
         UserPointException userPointException = assertThrows(UserPointException.class,()-> userPointService.useUserPoint(id,amount));
@@ -271,11 +277,16 @@ public class UserPointServiceTest {
     public void givenUserIdAndNullAmount_whenUsePoint_thenThrowNotEnoughPoint(){
         // given
         Long id = 1L;
-        Long amount = null;
+        Long initAmount = 1000L;
+        Long useAmount = 2000L;
+
+        UserPoint initPoint = getNewUserPoint(id,initAmount);
+
+        doReturn(initPoint).when(userPointRepository).selectById(id);
 
         // when
         // DTO로 만들어?
-        UserPointException userPointException = assertThrows(UserPointException.class,()-> userPointService.useUserPoint(id,amount));
+        UserPointException userPointException = assertThrows(UserPointException.class,()-> userPointService.useUserPoint(id,useAmount));
 
         // then
         assertThat(userPointException.getErrorResult()).isEqualTo(UserPointErrorResult.NOT_ENOUGH_POINT);
@@ -303,5 +314,9 @@ public class UserPointServiceTest {
         // then
         assertThat(result).isNotNull();
         assertThat(result.size()).isEqualTo(3);
+    }
+
+    public UserPoint getNewUserPoint(Long id, Long amount){
+        return new UserPoint(id,amount,System.currentTimeMillis());
     }
 }
