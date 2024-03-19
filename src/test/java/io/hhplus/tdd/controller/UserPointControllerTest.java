@@ -83,6 +83,22 @@ public class UserPointControllerTest {
         resultActions.andExpect(status().isOk());
     }
 
+    @DisplayName("[실패] 사용자의 포인트 내역을 조회 (사용자 없음)")
+    @Test()
+    public void givenUserId_whenGetPointHistories_thenNoPointHistories() throws Exception {
+        // given
+
+        //UserPointController userPointController = new UserPointController(new UserPointService(new UserPointRepository(new UserPointTable()),new PointHistoryService(new PointHistoryRepository(new PointHistoryTable()))));
+
+        // when
+        ResultActions resultActions = mockMvc
+                .perform(get("/point//histories")
+                        .contentType(MediaType.APPLICATION_JSON));
+
+        // then
+        resultActions.andExpect(status().isBadRequest());
+    }
+
     @DisplayName("[성공] 사용자의 포인트를 충전")
     @Test()
     public void givenUserIdAndAmount_whenChargePoint_thenSuccessfullyCharge() throws Exception {
@@ -96,7 +112,7 @@ public class UserPointControllerTest {
                         .content(gson.toJson(getUserPointRequestDto(10000L))));
 
         // then
-        resultActions.andExpect(status().isOk());
+        resultActions.andExpect(status().isCreated());
     }
 
     @DisplayName("[성공] 사용자의 포인트를 사용")
@@ -111,8 +127,25 @@ public class UserPointControllerTest {
                         .content(gson.toJson(getUserPointRequestDto(10000L))));
 
         // then
-        resultActions.andExpect(status().isOk());
+        resultActions.andExpect(status().isCreated());
     }
+
+    @DisplayName("[실패] 사용자의 포인트를 충전 (음수 입력)")
+    @Test()
+    public void givenNegativeAmount_whenChargePoint_thenSuccessfullyCharge() throws Exception {
+        // given
+        Long userId = 1L;
+
+        // when
+        ResultActions resultActions = mockMvc
+                .perform(patch("/point/1/charge")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(gson.toJson(getUserPointRequestDto(-1L))));
+
+        // then
+        resultActions.andExpect(status().isBadRequest());
+    }
+
 
     private UserPointRequestDto getUserPointRequestDto(final Long amount){
         return UserPointRequestDto

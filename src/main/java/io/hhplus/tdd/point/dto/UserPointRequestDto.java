@@ -14,9 +14,6 @@ import lombok.RequiredArgsConstructor;
 public class UserPointRequestDto {
 
     @NotNull
-    private final Long id;
-
-    @NotNull
     @Min(0)
     private final Long amount;
 }

@@ -8,6 +8,8 @@ import io.hhplus.tdd.point.dto.PointHistoryResponseDto;
 import io.hhplus.tdd.point.dto.UserPointResponseDto;
 import io.hhplus.tdd.point.repository.IUserPointRepository;
 import org.apache.catalina.User;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -17,6 +19,7 @@ import java.util.stream.Collectors;
 @Service
 public class UserPointService implements IUserPointService{
 
+    private static final Logger logger = LoggerFactory.getLogger(UserPointService.class);
     private final IUserPointRepository userPointRepository;
     private final IPointHistoryService pointHistoryService;
 
@@ -45,7 +48,6 @@ public class UserPointService implements IUserPointService{
     }
 
     public UserPointResponseDto chargeUserPoint(Long id, Long amount){
-
         if(amount == null || amount < 0){
             throw new UserPointException(UserPointErrorResult.WRONG_POINT_AMOUNT);
         }
