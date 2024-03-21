@@ -13,13 +13,14 @@ public class UserPointRepositoryStub implements IUserPointRepository {
     UserPoint saveReturn;
 
 
-    public UserPointRepositoryStub setReturnList(List<UserPoint> returnListVal){
+    public void setReturnList(List<UserPoint> returnListVal){
         this.selectAllByUserIdReturn = returnListVal;
-        return this;
     }
-    public UserPointRepositoryStub setReturn(UserPoint returnVal){
+    public void setReturn(UserPoint returnVal){
+        this.selectByIdReturn = returnVal;
+    }
+    public void setSavedReturn(UserPoint returnVal){
         this.saveReturn = returnVal;
-        return this;
     }
 
     @Override

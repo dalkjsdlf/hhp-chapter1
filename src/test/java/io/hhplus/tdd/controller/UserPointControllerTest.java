@@ -3,7 +3,10 @@ package io.hhplus.tdd.controller;
 import com.google.gson.Gson;
 import io.hhplus.tdd.ApiControllerAdvice;
 import io.hhplus.tdd.point.controller.UserPointController;
+import io.hhplus.tdd.point.data.PointHistory;
+import io.hhplus.tdd.point.dto.PointHistoryResponseDto;
 import io.hhplus.tdd.point.dto.UserPointRequestDto;
+import io.hhplus.tdd.point.enumdata.TransactionType;
 import io.hhplus.tdd.point.service.UserPointService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -11,11 +14,15 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+
+import java.util.List;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -73,6 +80,14 @@ public class UserPointControllerTest {
         // given
         Long userId = 1L;
 
+        Mockito.doReturn(
+                List.of(getPointHistoryResponseDto(userId, 10000L, TransactionType.CHARGE),
+                        getPointHistoryResponseDto(userId, 2000L , TransactionType.USE),
+                        getPointHistoryResponseDto(userId, 300L  , TransactionType.CHARGE))
+                )
+                .when(userPointService).getPointHistory(userId);
+
+        // controller -> service -> reposi
         // when
         ResultActions resultActions = mockMvc
                 .perform(get("/point/1/histories")
@@ -81,7 +96,11 @@ public class UserPointControllerTest {
 
         // then
         resultActions.andExpect(status().isOk());
+        resultActions.andExpect(MockMvcResultMatchers.jsonPath("$[0].userId").value(1L));
+        resultActions.andExpect(MockMvcResultMatchers.jsonPath("$[1].userId").value(1L));
+        resultActions.andExpect(MockMvcResultMatchers.jsonPath("$[2].userId").value(1L));
     }
+
 
     @DisplayName("[실패] 사용자의 포인트 내역을 조회 (사용자 없음)")
     @Test()
@@ -110,7 +129,6 @@ public class UserPointControllerTest {
                 .perform(patch("/point/1/charge")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(gson.toJson(getUserPointRequestDto(10000L))));
-
         // then
         resultActions.andExpect(status().isCreated());
     }
@@ -151,6 +169,21 @@ public class UserPointControllerTest {
         return UserPointRequestDto
                 .builder()
                 .amount(amount)
+                .build();
+    }
+
+
+    private PointHistoryResponseDto getPointHistoryResponseDto
+            (
+                    final Long userId,
+                    final Long amount,
+                    final TransactionType type
+                    ) {
+        return PointHistoryResponseDto
+                .builder()
+                .userId(userId)
+                .amount(amount)
+                .type(type)
                 .build();
     }
 }

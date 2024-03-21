@@ -7,6 +7,7 @@ import io.hhplus.tdd.point.data.UserPoint;
 import io.hhplus.tdd.point.dto.PointHistoryResponseDto;
 import io.hhplus.tdd.point.dto.UserPointResponseDto;
 import io.hhplus.tdd.point.repository.IUserPointRepository;
+import io.hhplus.tdd.threadhandle.SimultaneousEntriesLockByKey;
 import org.apache.catalina.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,7 +23,7 @@ public class UserPointService implements IUserPointService{
     private static final Logger logger = LoggerFactory.getLogger(UserPointService.class);
     private final IUserPointRepository userPointRepository;
     private final IPointHistoryService pointHistoryService;
-
+    private static Long sharedAmount = 0L;
     public UserPointService(@Autowired(required = false) IUserPointRepository userPointRepository
                           , @Autowired(required = false) IPointHistoryService pointHistoryService) {
         this.userPointRepository = userPointRepository;
@@ -36,6 +37,8 @@ public class UserPointService implements IUserPointService{
         }
 
         UserPoint userPoint = userPointRepository.selectById(id);
+        logger.info("user point [{}]", userPoint);
+
         if(userPoint == null){
             throw new UserPointException(UserPointErrorResult.USER_POINT_NOT_FOUND);
         }
@@ -44,21 +47,33 @@ public class UserPointService implements IUserPointService{
                 .id(userPoint.id())
                 .amount(userPoint.point())
                 .build();
-        //return userPoint;
     }
 
     public UserPointResponseDto chargeUserPoint(Long id, Long amount){
+
         if(amount == null || amount < 0){
             throw new UserPointException(UserPointErrorResult.WRONG_POINT_AMOUNT);
         }
-        UserPoint userPoint = userPointRepository.selectById(id);
-
         Long newAmount = amount;
-        if(userPoint != null){
-            newAmount += userPoint.point();
+
+        UserPoint newUserPoint = null;
+
+        String key = "key";
+        SimultaneousEntriesLockByKey lockByKey = new SimultaneousEntriesLockByKey();
+        try{
+            lockByKey.lock(key);
+            UserPoint userPoint = userPointRepository.selectById(id);
+            logger.info("userPoint 조회값 [{}]",userPoint);
+            if(userPoint != null){
+                newAmount += userPoint.point();
+            }
+            logger.info("userPoint 저장값 [{}]",newAmount);
+            newUserPoint = userPointRepository.save(id,newAmount);
+            logger.info("userPoint 저장완료");
+        }finally {
+            lockByKey.unlock(key);
         }
 
-        UserPoint newUserPoint = userPointRepository.save(id,newAmount);
         return UserPointResponseDto
                 .builder()
                 .id(newUserPoint.id())
@@ -95,6 +110,22 @@ public class UserPointService implements IUserPointService{
                 .build();
     }
 
+    public void test(Long val){
+        String key = "key";
+        SimultaneousEntriesLockByKey lockByKey = new SimultaneousEntriesLockByKey();
+        try{
+            lockByKey.lock(key);
+            logger.info("userPointService shared amount >> " + sharedAmount);
+            sharedAmount = sharedAmount + val;
+        }finally {
+            lockByKey.unlock(key);
+        }
+    }
+
+    public Long getSharedAmount(){
+        return sharedAmount;
+    }
+
     public List<PointHistoryResponseDto> getPointHistory(Long userId){
         if(userId == null){
             throw new UserPointException(UserPointErrorResult.WRONG_USER_ID);
@@ -103,7 +134,7 @@ public class UserPointService implements IUserPointService{
         List<PointHistory> pointHistoreis = pointHistoryService.getPointHistory(userId);
         return pointHistoreis.stream().map(item->PointHistoryResponseDto
                 .builder()
-                .id(item.userId())
+                .userId(item.userId())
                 .amount(item.amount())
                 .type(item.type())
                 .build()).collect(Collectors.toList());

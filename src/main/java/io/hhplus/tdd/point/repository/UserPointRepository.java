@@ -2,10 +2,13 @@ package io.hhplus.tdd.point.repository;
 
 import io.hhplus.tdd.database.UserPointTable;
 import io.hhplus.tdd.point.data.UserPoint;
+import io.hhplus.tdd.threadhandle.LockByKey;
+import io.hhplus.tdd.threadhandle.SimultaneousEntriesLockByKey;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class UserPointRepository implements IUserPointRepository{
 
@@ -32,7 +35,6 @@ public class UserPointRepository implements IUserPointRepository{
 
     @Override
     public UserPoint save(Long id, Long amount) {
-
         try {
             return userPointTable.insertOrUpdate(id, amount);
         } catch (InterruptedException e) {

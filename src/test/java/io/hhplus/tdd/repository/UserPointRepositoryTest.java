@@ -7,6 +7,13 @@ import io.hhplus.tdd.point.repository.UserPointRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 /**
@@ -20,9 +27,9 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 public class UserPointRepositoryTest {
 
+    private static Logger logger = LoggerFactory.getLogger(UserPointRepositoryTest.class);
     private IUserPointRepository userPointRepository;
-
-
+    static Long a = 1L;
     @BeforeEach
     public void beforeAction(){
         userPointRepository = new UserPointRepository(new UserPointTable());
@@ -77,5 +84,40 @@ public class UserPointRepositoryTest {
         assertThat(savedPointInMap.point()).isEqualTo(savedPoint2.point());
     }
 
+    @DisplayName("")
+    @Test()
+    public void given_when_then() throws InterruptedException {
+        // given
+        int threadCount = 10;
+        ExecutorService executorService = Executors.newFixedThreadPool(4);
 
+        CountDownLatch latch = new CountDownLatch(threadCount);
+        Long userId = 1L;
+
+        for(int i = 0 ; i < threadCount; i++){
+
+        }
+
+        userPointRepository.save(userId,1L);
+
+        //when
+        for (int i = 0; i < threadCount; i++) {
+            executorService.submit(() -> {
+                try {
+                    UserPoint result = userPointRepository.selectById(userId);
+                    logger.info("[{}]",result.point());
+                    Long newPoint = result.point() + 1L;
+                    userPointRepository.save(userId,newPoint);
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+        latch.await();
+        UserPoint result = userPointRepository.selectById(userId);
+
+        logger.info("결과 >>> {}", result.point());
+        //then
+        assertThat(result.point()).isEqualTo(55);
+    }
 }

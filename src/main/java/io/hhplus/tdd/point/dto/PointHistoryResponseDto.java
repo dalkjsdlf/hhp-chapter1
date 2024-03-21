@@ -15,7 +15,7 @@ import lombok.RequiredArgsConstructor;
 public class PointHistoryResponseDto {
 
     @NotNull
-    private final Long id;
+    private final Long userId;
 
     @NotNull
     @Min(0)

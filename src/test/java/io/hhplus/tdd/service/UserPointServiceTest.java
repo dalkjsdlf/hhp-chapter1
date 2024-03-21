@@ -1,20 +1,22 @@
 package io.hhplus.tdd.service;
 
 import io.hhplus.tdd.UserPointRepositoryStub;
+import io.hhplus.tdd.database.PointHistoryTable;
+import io.hhplus.tdd.database.UserPointTable;
 import io.hhplus.tdd.exception.UserPointErrorResult;
 import io.hhplus.tdd.exception.UserPointException;
 import io.hhplus.tdd.point.data.PointHistory;
 import io.hhplus.tdd.point.data.UserPoint;
 import io.hhplus.tdd.point.dto.PointHistoryResponseDto;
-import io.hhplus.tdd.point.dto.UserPointRequestDto;
 import io.hhplus.tdd.point.dto.UserPointResponseDto;
 import io.hhplus.tdd.point.enumdata.TransactionType;
-import io.hhplus.tdd.point.repository.IPointHistoryRepository;
 import io.hhplus.tdd.point.repository.IUserPointRepository;
+import io.hhplus.tdd.point.repository.PointHistoryRepository;
+import io.hhplus.tdd.point.repository.UserPointRepository;
 import io.hhplus.tdd.point.service.PointHistoryService;
 import io.hhplus.tdd.point.service.UserPointService;
 import io.hhplus.tdd.stub.PointHistoryServiceStub;
-import org.apache.catalina.User;
+import org.assertj.core.api.AssertionsForClassTypes;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,8 +24,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -57,6 +65,11 @@ public class UserPointServiceTest {
     @Mock private IUserPointRepository userPointRepository;
     @Mock private PointHistoryService pointHistoryService;
 
+    private static Long n = 1L;
+
+
+    private static Logger logger = LoggerFactory.getLogger(UserPointServiceTest.class);
+
     @DisplayName("[성공] NULL 검사 - 테스트성공")
     @Test()
     public void givenNothing_whenNothing_thenUserPointRepository(){
@@ -71,22 +84,31 @@ public class UserPointServiceTest {
      * 포인트 조회 테스트케이스
      * */
 
-    @DisplayName("[성공] 사용자ID로 포인트 조회")
+    @DisplayName("[성공] 사용자ID로 포인트 조회 (확인 샘플)")
     @Test()
     public void givenUserId_whenGetPoint_thenGetUserPoint(){
         // given
+        UserPointRepositoryStub stubRepo = new UserPointRepositoryStub();
+        PointHistoryServiceStub stupSvc  = new PointHistoryServiceStub();
+
         Long id = 1L;
         Long amount = 10000L;
-        UserPoint resultPoint = new UserPoint(id, amount, System.currentTimeMillis());
-        doReturn(resultPoint).when(userPointRepository).selectById(id);
+        //doReturn(resultPoint).when(userPointRepository).selectById(id);
 
-//        UserPointRepositoryStub stubRepo = new UserPointRepositoryStub();
-//        PointHistoryServiceStub stupSvc  = new PointHistoryServiceStub();
-//
-//        stubRepo.setReturn(resultPoint);
-//        stupSvc.setResult(null);
-//
-//        userPointService = new UserPointService(stubRepo,stupSvc);
+        /*
+         * 테스트용 UserPoint객체 생성
+         */
+        UserPoint resultPoint = new UserPoint(id, amount, System.currentTimeMillis());
+
+        /*
+         * Repo의 selectById의 결과값 입력
+         */
+        stubRepo.setReturn(resultPoint);
+
+        /*
+         * Stub객체를 주입한 UserPointService 직접 생성
+         */
+        userPointService = new UserPointService(stubRepo,stupSvc);
 
         // when
         UserPointResponseDto userPointDto = userPointService.getUserPoint(id);
@@ -303,5 +325,46 @@ public class UserPointServiceTest {
 
     public UserPoint getNewUserPoint(Long id, Long amount){
         return new UserPoint(id,amount,System.currentTimeMillis());
+    }
+
+    @DisplayName("[성공] 여러 사용자가 동시에 충전하여도 순차처리됨")
+    @Test()
+    public void givenChargeValue_whenChargeSimultaneously_thenSyncResult() throws InterruptedException {
+        // given
+        int threadCount = 10;
+        ExecutorService executorService = Executors.newFixedThreadPool(26);
+
+        CountDownLatch latch = new CountDownLatch(threadCount);
+        Long userId = 1L;
+
+        userPointRepository = new UserPointRepository(new UserPointTable());
+        pointHistoryService = new PointHistoryService(
+                                    new PointHistoryRepository(new PointHistoryTable())
+                             );
+
+        userPointService = new UserPointService(userPointRepository,pointHistoryService);
+//        for(int i = 0 ; i < threadCount; i++){
+//            userPointService.chargeUserPoint(userId,n);
+//            n++;
+//        }
+
+        //when
+        for (int i = 0; i < threadCount; i++) {
+            executorService.submit(() -> {
+                try {
+                    //userPointService.chargeUserPoint(userId,n.get());
+                    userPointService.chargeUserPoint(userId,n);
+                    n++;
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+        latch.await();
+        UserPointResponseDto result = userPointService.getUserPoint(userId);
+        logger.info("결과 >>> {}", result.getAmount());
+
+        //then
+        AssertionsForClassTypes.assertThat( result.getAmount()).isEqualTo(55);
     }
 }
