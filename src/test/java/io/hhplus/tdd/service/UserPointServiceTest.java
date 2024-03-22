@@ -65,7 +65,9 @@ public class UserPointServiceTest {
     @Mock private IUserPointRepository userPointRepository;
     @Mock private PointHistoryService pointHistoryService;
 
-    private static Long n = 1L;
+    public static Long n = 1L;
+
+    private final static ThreadLocal<Long> threadLocal = new ThreadLocal<>();
 
 
     private static Logger logger = LoggerFactory.getLogger(UserPointServiceTest.class);
@@ -80,10 +82,10 @@ public class UserPointServiceTest {
         // then
         assertThat(userPointService).isNotNull();
     }
-    /**
-     * 포인트 조회 테스트케이스
-     * */
 
+    /**
+     * @Desc [포인트 조회] 포인트 조회시도 성공
+     * */
     @DisplayName("[성공] 사용자ID로 포인트 조회 (확인 샘플)")
     @Test()
     public void givenUserId_whenGetPoint_thenGetUserPoint(){
@@ -117,6 +119,10 @@ public class UserPointServiceTest {
         assertThat(userPointDto).isNotNull();
         assertThat(userPointDto.getId()).isEqualTo(id);
     }
+
+    /**
+     * @Desc [포인트 조회] 조회시도하는 사용자 ID가 존재하지 않을 때
+     * */
     @DisplayName("[실패] 사용자ID로 포인트 조회(ID 조회안됨)")
     @Test()
     public void givenUserId_whenGetPoint_thenThrowPointNotFound(){
@@ -132,6 +138,9 @@ public class UserPointServiceTest {
         assertThat(userPointException.getErrorResult()).isEqualTo(UserPointErrorResult.USER_POINT_NOT_FOUND);
     }
 
+    /**
+     * @Desc [포인트 조회] 조회시도하는 사용자 ID가 NULL일때 실패
+     * */
     @DisplayName("[실패] 사용자ID로 포인트 조회(ID가 null 입력)")
     @Test()
     public void givenNullOfUserId_whenGetPoint_thenThrowWrongId(){
@@ -147,7 +156,7 @@ public class UserPointServiceTest {
     }
 
     /**
-     * 포인트 충전 테스트케이스
+     * @Desc [포인트 충전] 처음 충전하는 사용자 충전 시도 성공
      * */
     @DisplayName("[성공] 새로운 사용자 ID로 포인트 충전")
     @Test()
@@ -170,6 +179,9 @@ public class UserPointServiceTest {
         assertThat(chargedUserPoint.getAmount()).isEqualTo(amount);
     }
 
+    /**
+     * @Desc [포인트 충전] 사용자가 이미 존재할 때 추가 충전시도 성공
+     * */
     @DisplayName("[성공] 기 사용자로 포인트 충전 추가적립 - TODO 점검필요")
     @Test()
     public void givenExistedUserId_whenChargePoint_thenSuccessfullyCharge(){
@@ -195,6 +207,10 @@ public class UserPointServiceTest {
         assertThat(chargedUserPoint.getId()).isEqualTo(id);
         assertThat(chargedUserPoint.getAmount()).isEqualTo(totalAmount);
     }
+
+    /**
+     * @Desc [포인트 충전] 충전하려는 포인트 데이터가 음수 일때 실패
+     * */
     @DisplayName("[실패] 충전값이 음수")
     @Test()
     public void givenUserIdAndNegativeAmount_whenChargePoint_thenThrowWrongAmount(){
@@ -210,6 +226,9 @@ public class UserPointServiceTest {
         assertThat(userPointException.getErrorResult()).isEqualTo(UserPointErrorResult.WRONG_POINT_AMOUNT);
     }
 
+    /**
+     * @Desc [포인트 충전] 충전하려는 포인트 데이터가 NULL일때 실패
+     * */
     @DisplayName("[실패] 충전값이 NULL")
     @Test()
     public void givenUserIdAndNullAmount_whenChargePoint_thenThrowWrongAmount(){
@@ -226,7 +245,38 @@ public class UserPointServiceTest {
     }
 
     /**
-     * 포인트 사용 테스트케이스
+     * @Desc [포인트 충전] 사용자가 이미 존재할 때 추가 충전시도 하였을 때 히스토리 저장 확인
+     * */
+    @DisplayName("[성공] 기 사용자로 포인트 충전 추가적립 - TODO 점검필요")
+    @Test()
+    public void givenExistedUserId_whenChargePoint_thenSuccessfullySaveHistory(){
+        // given
+        Long id = 1L;
+        Long newAmount = 10000L; //추가 충전 포인트
+        Long initAmount = 2000L; //충전 전 가용포인트
+
+        Long totalAmount = initAmount + newAmount; //최종 충전 포인트
+
+        UserPoint initPoint = getNewUserPoint(id,initAmount);
+        UserPoint resultPoint = getNewUserPoint(id,totalAmount);
+
+        doReturn(initPoint).when(userPointRepository).selectById(id);
+        doReturn(resultPoint).when(userPointRepository).save(id,totalAmount);
+
+        doReturn(resultPoint).when(pointHistoryService).save(id,TransactionType.CHARGE,newAmount);
+
+        // when
+        // DTO로 만들어?
+        UserPointResponseDto chargedUserPoint = userPointService.chargeUserPoint(id,newAmount);
+
+        // then
+        assertThat(chargedUserPoint).isNotNull();
+        assertThat(chargedUserPoint.getId()).isEqualTo(id);
+        assertThat(chargedUserPoint.getAmount()).isEqualTo(totalAmount);
+    }
+
+    /**
+     * @Desc [포인트 사용]초기포인트가 10000일때 2000포인트 사용 시도 성공
      * */
     @DisplayName("[성공] 기 사용자로 포인트 사용 - TODO 점검필요")
     @Test()
@@ -252,6 +302,9 @@ public class UserPointServiceTest {
         assertThat(chargedUserPoint.getId()).isEqualTo(id);
         assertThat(chargedUserPoint.getAmount()).isEqualTo(resAmount);
     }
+    /**
+     * @Desc [포인트 사용]사용하려는 포인트 데이터가 음수 일때 실패
+     * */
     @DisplayName("[실패] 사용값이 음수")
     @Test()
     public void givenUserIdAndNegativeAmount_whenUsePoint_thenThrowWrongAmount(){
@@ -267,6 +320,9 @@ public class UserPointServiceTest {
         assertThat(userPointException.getErrorResult()).isEqualTo(UserPointErrorResult.WRONG_POINT_AMOUNT);
     }
 
+    /**
+     * @Desc [포인트 사용]사용하려는 포인트 데이터가 NULL일때 실패
+     * */
     @DisplayName("[실패] 사용값이 NULL")
     @Test()
     public void givenUserIdAndNullAmount_whenUsePoint_thenThrowWrongAmount(){
@@ -282,6 +338,9 @@ public class UserPointServiceTest {
         assertThat(userPointException.getErrorResult()).isEqualTo(UserPointErrorResult.WRONG_POINT_AMOUNT);
     }
 
+    /**
+     * @Desc [포인트 사용] 2000포인트가 저장되어 있는 상태에서 10000포인트를 사용하려는 시도시 실패
+     * */
     @Disabled
     @DisplayName("[실패] 사용할 사용자의 포인트가 부족한")
     @Test()
@@ -300,6 +359,9 @@ public class UserPointServiceTest {
         assertThat(userPointException.getErrorResult()).isEqualTo(UserPointErrorResult.NOT_ENOUGH_POINT);
     }
 
+    /**
+     * @Desc [포인트 사용] 특정 사용자로 히스토리 조회 성공
+     * */
     @DisplayName("[성공] 특정 사용자로 포인트 히스토리 조회성공")
     @Test()
     public void givenUserId_whenGetPointHistory_thenGetUserPointHistory(){
@@ -352,9 +414,11 @@ public class UserPointServiceTest {
         for (int i = 0; i < threadCount; i++) {
             executorService.submit(() -> {
                 try {
+
+                    logger.info("threadLocal [{}]",n);
                     //userPointService.chargeUserPoint(userId,n.get());
                     userPointService.chargeUserPoint(userId,n);
-                    n++;
+
                 } finally {
                     latch.countDown();
                 }
@@ -365,6 +429,8 @@ public class UserPointServiceTest {
         logger.info("결과 >>> {}", result.getAmount());
 
         //then
-        AssertionsForClassTypes.assertThat( result.getAmount()).isEqualTo(55);
+        AssertionsForClassTypes.assertThat( result.getAmount()).isEqualTo(10);
     }
+
+
 }

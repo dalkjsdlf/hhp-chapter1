@@ -3,9 +3,9 @@ package io.hhplus.tdd.controller;
 import com.google.gson.Gson;
 import io.hhplus.tdd.ApiControllerAdvice;
 import io.hhplus.tdd.point.controller.UserPointController;
-import io.hhplus.tdd.point.data.PointHistory;
 import io.hhplus.tdd.point.dto.PointHistoryResponseDto;
 import io.hhplus.tdd.point.dto.UserPointRequestDto;
+import io.hhplus.tdd.point.dto.UserPointResponseDto;
 import io.hhplus.tdd.point.enumdata.TransactionType;
 import io.hhplus.tdd.point.service.UserPointService;
 import org.junit.jupiter.api.BeforeEach;
@@ -65,6 +65,10 @@ public class UserPointControllerTest {
         // given
         Long userId = 1L;
 
+
+        Mockito.doReturn(getUserPointResponseDto(userId,2000L))
+                .when(userPointService)
+                .getUserPoint(1L);
         // when
         ResultActions resultActions = mockMvc
                 .perform(get("/point/1")
@@ -72,6 +76,8 @@ public class UserPointControllerTest {
 
         // then
         resultActions.andExpect(status().isOk());
+//        resultActions.andExpect(MockMvcResultMatchers.jsonPath("$[0].id").value(1L));
+//        resultActions.andExpect(MockMvcResultMatchers.jsonPath("$[0].amount").value(2000L));
     }
 
     @DisplayName("[성공] 사용자의 포인트 내역을 조회")
@@ -116,6 +122,22 @@ public class UserPointControllerTest {
 
         // then
         resultActions.andExpect(status().isBadRequest());
+    }
+
+    @DisplayName("[실패] 페이지 잘못 접근")
+    @Test()
+    public void givenNothing_whenRequestByWrongUrl_thenNotFound() throws Exception {
+        // given
+
+        //UserPointController userPointController = new UserPointController(new UserPointService(new UserPointRepository(new UserPointTable()),new PointHistoryService(new PointHistoryRepository(new PointHistoryTable()))));
+
+        // when
+        ResultActions resultActions = mockMvc
+                .perform(get("/poin")
+                        .contentType(MediaType.APPLICATION_JSON));
+
+        // then
+        resultActions.andExpect(status().isNotFound());
     }
 
     @DisplayName("[성공] 사용자의 포인트를 충전")
@@ -184,6 +206,18 @@ public class UserPointControllerTest {
                 .userId(userId)
                 .amount(amount)
                 .type(type)
+                .build();
+    }
+
+    private UserPointResponseDto getUserPointResponseDto
+            (
+                    final Long id,
+                    final Long amount
+            ) {
+        return UserPointResponseDto
+                .builder()
+                .id(id)
+                .amount(amount)
                 .build();
     }
 }

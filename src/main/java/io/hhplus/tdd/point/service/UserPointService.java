@@ -6,6 +6,7 @@ import io.hhplus.tdd.point.data.PointHistory;
 import io.hhplus.tdd.point.data.UserPoint;
 import io.hhplus.tdd.point.dto.PointHistoryResponseDto;
 import io.hhplus.tdd.point.dto.UserPointResponseDto;
+import io.hhplus.tdd.point.enumdata.TransactionType;
 import io.hhplus.tdd.point.repository.IUserPointRepository;
 import io.hhplus.tdd.threadhandle.SimultaneousEntriesLockByKey;
 import org.apache.catalina.User;
@@ -15,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,6 +26,8 @@ public class UserPointService implements IUserPointService{
     private final IUserPointRepository userPointRepository;
     private final IPointHistoryService pointHistoryService;
     private static Long sharedAmount = 0L;
+
+    private final ReentrantLock lock = new ReentrantLock();
     public UserPointService(@Autowired(required = false) IUserPointRepository userPointRepository
                           , @Autowired(required = false) IPointHistoryService pointHistoryService) {
         this.userPointRepository = userPointRepository;
@@ -55,31 +59,43 @@ public class UserPointService implements IUserPointService{
             throw new UserPointException(UserPointErrorResult.WRONG_POINT_AMOUNT);
         }
         Long newAmount = amount;
-
         UserPoint newUserPoint = null;
+        PointHistory pointHistory = null;
 
-        String key = "key";
-        SimultaneousEntriesLockByKey lockByKey = new SimultaneousEntriesLockByKey();
-        try{
-            lockByKey.lock(key);
-            UserPoint userPoint = userPointRepository.selectById(id);
-            logger.info("userPoint 조회값 [{}]",userPoint);
-            if(userPoint != null){
-                newAmount += userPoint.point();
-            }
-            logger.info("userPoint 저장값 [{}]",newAmount);
-            newUserPoint = userPointRepository.save(id,newAmount);
-            logger.info("userPoint 저장완료");
-        }finally {
-            lockByKey.unlock(key);
+        //String key = "key";
+        //SimultaneousEntriesLockByKey lockByKey = new SimultaneousEntriesLockByKey();
+        //synchronized (this){
+        //lockByKey.lock(key);
+
+        lock.lock();
+        UserPoint userPoint = userPointRepository.selectById(id);
+        logger.info("userPoint 조회값 [{}] 넘어온 값 [{}]",userPoint,amount);
+
+        if(userPoint != null){
+            newAmount += userPoint.point();
+        }
+        logger.info("userPoint 저장값 [{}]",newAmount);
+
+        newUserPoint = userPointRepository.save(id,newAmount);
+
+        logger.info("userPoint 저장완료");
+
+        pointHistory = pointHistoryService.save(id, TransactionType.CHARGE,amount);
+
+        lock.unlock();
+
+
+        if(newUserPoint == null || pointHistory == null){
+            throw new UserPointException(UserPointErrorResult.FAILED_TO_CHARGE);
         }
 
         return UserPointResponseDto
                 .builder()
                 .id(newUserPoint.id())
                 .amount(newUserPoint.point())
+                .historyId(pointHistory.id())
                 .build();
-
+        //}
     }
 
     public UserPointResponseDto useUserPoint(Long id, Long amount){
@@ -89,22 +105,35 @@ public class UserPointService implements IUserPointService{
             throw new UserPointException(UserPointErrorResult.WRONG_POINT_AMOUNT);
         }
 
-        UserPoint userPoint = userPointRepository.selectById(id);
+        lock.lock();
+        PointHistory pointHistory = null;
+        UserPoint newUserPoint = userPointRepository.selectById(id);
 
-        if(userPoint == null){
+        if(newUserPoint == null){
             throw new UserPointException(UserPointErrorResult.USER_POINT_NOT_FOUND);
         }
 
-        long resVal = userPoint.point() - amount;
+        long resVal = newUserPoint.point() - amount;
 
         //음수 검사 함수
         if(resVal < 0){
             throw new UserPointException(UserPointErrorResult.NOT_ENOUGH_POINT);
         }
 
-        UserPoint savedUserPoint = userPointRepository.save(id,resVal);
+        UserPoint savedUserPoint = userPointRepository.save(id, amount);
+
+        pointHistory = pointHistoryService.save(id, TransactionType.USE,amount);
+
+        lock.unlock();
+
+
+        if(pointHistory == null){
+            throw new UserPointException(UserPointErrorResult.FAILED_TO_USE);
+        }
+
         return UserPointResponseDto
                 .builder()
+                .historyId(pointHistory.id())
                 .id(savedUserPoint.id())
                 .amount(savedUserPoint.point())
                 .build();

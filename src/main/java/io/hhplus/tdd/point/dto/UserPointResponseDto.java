@@ -16,6 +16,9 @@ public class UserPointResponseDto {
     private final Long id;
 
     @NotNull
+    private final Long historyId;
+
+    @NotNull
     @Min(0)
     private final Long amount;
 

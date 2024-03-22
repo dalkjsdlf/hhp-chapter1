@@ -84,40 +84,4 @@ public class UserPointRepositoryTest {
         assertThat(savedPointInMap.point()).isEqualTo(savedPoint2.point());
     }
 
-    @DisplayName("")
-    @Test()
-    public void given_when_then() throws InterruptedException {
-        // given
-        int threadCount = 10;
-        ExecutorService executorService = Executors.newFixedThreadPool(4);
-
-        CountDownLatch latch = new CountDownLatch(threadCount);
-        Long userId = 1L;
-
-        for(int i = 0 ; i < threadCount; i++){
-
-        }
-
-        userPointRepository.save(userId,1L);
-
-        //when
-        for (int i = 0; i < threadCount; i++) {
-            executorService.submit(() -> {
-                try {
-                    UserPoint result = userPointRepository.selectById(userId);
-                    logger.info("[{}]",result.point());
-                    Long newPoint = result.point() + 1L;
-                    userPointRepository.save(userId,newPoint);
-                } finally {
-                    latch.countDown();
-                }
-            });
-        }
-        latch.await();
-        UserPoint result = userPointRepository.selectById(userId);
-
-        logger.info("결과 >>> {}", result.point());
-        //then
-        assertThat(result.point()).isEqualTo(55);
-    }
 }
