@@ -3,14 +3,11 @@ package io.hhplus.tdd.point.service;
 import io.hhplus.tdd.exception.UserPointErrorResult;
 import io.hhplus.tdd.exception.UserPointException;
 import io.hhplus.tdd.point.data.PointHistory;
-import io.hhplus.tdd.point.data.UserPoint;
 import io.hhplus.tdd.point.enumdata.TransactionType;
 import io.hhplus.tdd.point.repository.IPointHistoryRepository;
-import io.hhplus.tdd.point.repository.PointHistoryRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.awt.*;
 import java.util.List;
 
 @Service

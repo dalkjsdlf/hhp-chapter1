@@ -1,4 +1,4 @@
-package io.hhplus.tdd;
+package io.hhplus.tdd.exception;
 
 import io.hhplus.tdd.exception.UserPointErrorResult;
 import io.hhplus.tdd.exception.UserPointException;

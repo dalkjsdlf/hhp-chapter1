@@ -1,19 +1,13 @@
 package io.hhplus.tdd.repository;
 
 import io.hhplus.tdd.database.PointHistoryTable;
-import io.hhplus.tdd.database.UserPointTable;
 import io.hhplus.tdd.point.data.PointHistory;
-import io.hhplus.tdd.point.data.UserPoint;
 import io.hhplus.tdd.point.enumdata.TransactionType;
 import io.hhplus.tdd.point.repository.IPointHistoryRepository;
 import io.hhplus.tdd.point.repository.PointHistoryRepository;
-import io.hhplus.tdd.point.repository.UserPointRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.boot.test.context.SpringBootTest;
 
 import java.util.List;
 

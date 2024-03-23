@@ -2,16 +2,15 @@ package io.hhplus.tdd.stub;
 
 import io.hhplus.tdd.point.data.UserPoint;
 import io.hhplus.tdd.point.repository.IUserPointRepository;
+import lombok.Setter;
 
 import java.util.List;
 
 public class UserPointRepositoryStub implements IUserPointRepository {
 
+    @Setter
     private UserPoint result;
     private List<UserPoint> resultList;
-    public void setResult(UserPoint result){
-        this.result = result;
-    }
 
     public void setNull(){
 

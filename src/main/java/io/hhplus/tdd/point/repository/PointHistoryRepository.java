@@ -3,7 +3,6 @@ package io.hhplus.tdd.point.repository;
 import io.hhplus.tdd.database.PointHistoryTable;
 import io.hhplus.tdd.point.data.PointHistory;
 import io.hhplus.tdd.point.enumdata.TransactionType;
-import org.springframework.stereotype.Repository;
 
 import java.util.List;
 public class PointHistoryRepository implements IPointHistoryRepository{

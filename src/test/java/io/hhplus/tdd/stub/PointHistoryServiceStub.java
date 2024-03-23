@@ -1,7 +1,6 @@
 package io.hhplus.tdd.stub;
 
 import io.hhplus.tdd.point.data.PointHistory;
-import io.hhplus.tdd.point.data.UserPoint;
 import io.hhplus.tdd.point.enumdata.TransactionType;
 import io.hhplus.tdd.point.service.IPointHistoryService;
 

@@ -1,9 +1,5 @@
 package io.hhplus.tdd.point.service;
 
-import io.hhplus.tdd.exception.UserPointErrorResult;
-import io.hhplus.tdd.exception.UserPointException;
-import io.hhplus.tdd.point.data.PointHistory;
-import io.hhplus.tdd.point.data.UserPoint;
 import io.hhplus.tdd.point.dto.PointHistoryResponseDto;
 import io.hhplus.tdd.point.dto.UserPointResponseDto;
 

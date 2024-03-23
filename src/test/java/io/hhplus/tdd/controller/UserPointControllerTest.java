@@ -1,7 +1,7 @@
 package io.hhplus.tdd.controller;
 
 import com.google.gson.Gson;
-import io.hhplus.tdd.ApiControllerAdvice;
+import io.hhplus.tdd.exception.ApiControllerAdvice;
 import io.hhplus.tdd.point.controller.UserPointController;
 import io.hhplus.tdd.point.dto.PointHistoryResponseDto;
 import io.hhplus.tdd.point.dto.UserPointRequestDto;

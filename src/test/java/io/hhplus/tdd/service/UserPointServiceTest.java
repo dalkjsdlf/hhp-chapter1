@@ -1,6 +1,5 @@
 package io.hhplus.tdd.service;
 
-import io.hhplus.tdd.UserPointRepositoryStub;
 import io.hhplus.tdd.database.PointHistoryTable;
 import io.hhplus.tdd.database.UserPointTable;
 import io.hhplus.tdd.exception.UserPointErrorResult;
@@ -16,7 +15,10 @@ import io.hhplus.tdd.point.repository.UserPointRepository;
 import io.hhplus.tdd.point.service.PointHistoryService;
 import io.hhplus.tdd.point.service.UserPointService;
 import io.hhplus.tdd.stub.PointHistoryServiceStub;
+import io.hhplus.tdd.stub.UserPointRepositoryStub;
+import lombok.extern.slf4j.Slf4j;
 import org.assertj.core.api.AssertionsForClassTypes;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -31,7 +33,6 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -58,12 +59,13 @@ import static org.mockito.Mockito.doReturn;
  */
 @DisplayName("[User Point Service Test]")
 @ExtendWith(MockitoExtension.class)
+@Slf4j
 public class UserPointServiceTest {
 
 
-    @InjectMocks private UserPointService userPointService;
-    @Mock private IUserPointRepository userPointRepository;
-    @Mock private PointHistoryService pointHistoryService;
+    private UserPointService userPointService;
+    private IUserPointRepository userPointRepository;
+    private PointHistoryService pointHistoryService;
 
     public static Long n = 1L;
 
@@ -71,6 +73,16 @@ public class UserPointServiceTest {
 
 
     private static Logger logger = LoggerFactory.getLogger(UserPointServiceTest.class);
+
+    @BeforeEach
+    public void injectObject(){
+        userPointRepository = new UserPointRepository(new UserPointTable());
+        pointHistoryService = new PointHistoryService(
+                new PointHistoryRepository(new PointHistoryTable())
+        );
+
+        userPointService = new UserPointService(userPointRepository,pointHistoryService);
+    }
 
     @DisplayName("[성공] NULL 검사 - 테스트성공")
     @Test()
@@ -95,7 +107,6 @@ public class UserPointServiceTest {
 
         Long id = 1L;
         Long amount = 10000L;
-        //doReturn(resultPoint).when(userPointRepository).selectById(id);
 
         /*
          * 테스트용 UserPoint객체 생성
@@ -105,7 +116,7 @@ public class UserPointServiceTest {
         /*
          * Repo의 selectById의 결과값 입력
          */
-        stubRepo.setReturn(resultPoint);
+        stubRepo.setResult(resultPoint);
 
         /*
          * Stub객체를 주입한 UserPointService 직접 생성
@@ -165,8 +176,6 @@ public class UserPointServiceTest {
         Long id = 1L;
         Long amount = 10000L;
         // repository에서 user point null 반환
-        doReturn(null).when(userPointRepository).selectById(id);
-        doReturn(getNewUserPoint(id, amount)).when(userPointRepository).save(id,amount);
 
         // when
         // DTO로 만들어?
@@ -194,9 +203,6 @@ public class UserPointServiceTest {
 
         UserPoint initPoint = getNewUserPoint(id,initAmount);
         UserPoint resultPoint = getNewUserPoint(id,totalAmount);
-
-        doReturn(initPoint).when(userPointRepository).selectById(id);
-        doReturn(resultPoint).when(userPointRepository).save(id,totalAmount);
 
         // when
         // DTO로 만들어?
@@ -260,11 +266,6 @@ public class UserPointServiceTest {
         UserPoint initPoint = getNewUserPoint(id,initAmount);
         UserPoint resultPoint = getNewUserPoint(id,totalAmount);
 
-        doReturn(initPoint).when(userPointRepository).selectById(id);
-        doReturn(resultPoint).when(userPointRepository).save(id,totalAmount);
-
-        doReturn(resultPoint).when(pointHistoryService).save(id,TransactionType.CHARGE,newAmount);
-
         // when
         // DTO로 만들어?
         UserPointResponseDto chargedUserPoint = userPointService.chargeUserPoint(id,newAmount);
@@ -290,8 +291,6 @@ public class UserPointServiceTest {
 
         UserPoint initPoint = getNewUserPoint(id,initAmount);
         UserPoint resultPoint = getNewUserPoint(id,resAmount);
-        doReturn(initPoint).when(userPointRepository).selectById(id);
-        doReturn(resultPoint).when(userPointRepository).save(id,resAmount);
 
         // when
         // DTO로 만들어?
@@ -399,26 +398,15 @@ public class UserPointServiceTest {
         CountDownLatch latch = new CountDownLatch(threadCount);
         Long userId = 1L;
 
-        userPointRepository = new UserPointRepository(new UserPointTable());
-        pointHistoryService = new PointHistoryService(
-                                    new PointHistoryRepository(new PointHistoryTable())
-                             );
-
-        userPointService = new UserPointService(userPointRepository,pointHistoryService);
-//        for(int i = 0 ; i < threadCount; i++){
-//            userPointService.chargeUserPoint(userId,n);
-//            n++;
-//        }
-
+        userPointService.chargeUserPoint(userId,10000L);
         //when
         for (int i = 0; i < threadCount; i++) {
             executorService.submit(() -> {
                 try {
 
-                    logger.info("threadLocal [{}]",n);
-                    //userPointService.chargeUserPoint(userId,n.get());
                     userPointService.chargeUserPoint(userId,n);
-
+                    n = n + 1;
+                    logger.info("threadLocal [{}]",n);
                 } finally {
                     latch.countDown();
                 }
@@ -429,8 +417,42 @@ public class UserPointServiceTest {
         logger.info("결과 >>> {}", result.getAmount());
 
         //then
-        AssertionsForClassTypes.assertThat( result.getAmount()).isEqualTo(10);
+        AssertionsForClassTypes.assertThat( result.getAmount()).isEqualTo(10010L);
     }
 
+
+    @Disabled
+    @DisplayName("[성공] 여러 사용자가 동시에 사용하여도 순차처리됨")
+    @Test()
+    public void givenUseValue_whenUseSimultaneously_thenSyncResult() throws InterruptedException {
+        // given
+        int threadCount = 10;
+        ExecutorService executorService = Executors.newFixedThreadPool(26);
+
+        CountDownLatch latch = new CountDownLatch(threadCount);
+        Long userId = 1L;
+
+        userPointService.chargeUserPoint(userId,10000L);
+
+        //when
+        for (int i = 0; i < threadCount; i++) {
+            executorService.submit(() -> {
+                try {
+
+                    logger.debug("threadLocal [{}]",n);
+                    userPointService.useUserPoint(userId,n);
+
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+        latch.await();
+        UserPointResponseDto result = userPointService.getUserPoint(userId);
+        logger.debug("결과 >>> {}", result.getAmount());
+
+        //then
+        AssertionsForClassTypes.assertThat( result.getAmount()).isEqualTo(9990);
+    }
 
 }
