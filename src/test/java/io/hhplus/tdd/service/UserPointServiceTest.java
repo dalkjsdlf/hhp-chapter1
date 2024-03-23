@@ -18,7 +18,6 @@ import io.hhplus.tdd.stub.PointHistoryServiceStub;
 import io.hhplus.tdd.stub.UserPointRepositoryStub;
 import lombok.extern.slf4j.Slf4j;
 import org.assertj.core.api.AssertionsForClassTypes;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -63,26 +62,12 @@ import static org.mockito.Mockito.doReturn;
 public class UserPointServiceTest {
 
 
-    private UserPointService userPointService;
-    private IUserPointRepository userPointRepository;
-    private PointHistoryService pointHistoryService;
+    @InjectMocks private UserPointService userPointService;
+    @Mock private IUserPointRepository userPointRepository;
+    @Mock private PointHistoryService pointHistoryService;
 
     public static Long n = 1L;
 
-    private final static ThreadLocal<Long> threadLocal = new ThreadLocal<>();
-
-
-    private static Logger logger = LoggerFactory.getLogger(UserPointServiceTest.class);
-
-    @BeforeEach
-    public void injectObject(){
-        userPointRepository = new UserPointRepository(new UserPointTable());
-        pointHistoryService = new PointHistoryService(
-                new PointHistoryRepository(new PointHistoryTable())
-        );
-
-        userPointService = new UserPointService(userPointRepository,pointHistoryService);
-    }
 
     @DisplayName("[성공] NULL 검사 - 테스트성공")
     @Test()
@@ -102,9 +87,6 @@ public class UserPointServiceTest {
     @Test()
     public void givenUserId_whenGetPoint_thenGetUserPoint(){
         // given
-        UserPointRepositoryStub stubRepo = new UserPointRepositoryStub();
-        PointHistoryServiceStub stupSvc  = new PointHistoryServiceStub();
-
         Long id = 1L;
         Long amount = 10000L;
 
@@ -112,16 +94,7 @@ public class UserPointServiceTest {
          * 테스트용 UserPoint객체 생성
          */
         UserPoint resultPoint = new UserPoint(id, amount, System.currentTimeMillis());
-
-        /*
-         * Repo의 selectById의 결과값 입력
-         */
-        stubRepo.setResult(resultPoint);
-
-        /*
-         * Stub객체를 주입한 UserPointService 직접 생성
-         */
-        userPointService = new UserPointService(stubRepo,stupSvc);
+        doReturn(resultPoint).when(userPointRepository).selectById(id);
 
         // when
         UserPointResponseDto userPointDto = userPointService.getUserPoint(id);
@@ -175,8 +148,13 @@ public class UserPointServiceTest {
         // given
         Long id = 1L;
         Long amount = 10000L;
-        // repository에서 user point null 반환
 
+        // repository에서 user point null 반환
+        doReturn(null).when(userPointRepository).selectById(id);
+        doReturn(getNewUserPoint(id, amount)).when(userPointRepository).save(id,amount);
+        doReturn(new PointHistory(1L,id,TransactionType.CHARGE, amount, System.currentTimeMillis()))
+                .when(pointHistoryService)
+                .save(id,TransactionType.CHARGE,amount);
         // when
         // DTO로 만들어?
         UserPointResponseDto chargedUserPoint = userPointService.chargeUserPoint(id,amount);
@@ -204,6 +182,11 @@ public class UserPointServiceTest {
         UserPoint initPoint = getNewUserPoint(id,initAmount);
         UserPoint resultPoint = getNewUserPoint(id,totalAmount);
 
+        doReturn(initPoint).when(userPointRepository).selectById(id);
+        doReturn(resultPoint).when(userPointRepository).save(id,totalAmount);
+        doReturn(new PointHistory(1L,id,TransactionType.CHARGE, newAmount, System.currentTimeMillis()))
+                .when(pointHistoryService)
+                .save(id,TransactionType.CHARGE,newAmount);
         // when
         // DTO로 만들어?
         UserPointResponseDto chargedUserPoint = userPointService.chargeUserPoint(id,newAmount);
@@ -266,6 +249,13 @@ public class UserPointServiceTest {
         UserPoint initPoint = getNewUserPoint(id,initAmount);
         UserPoint resultPoint = getNewUserPoint(id,totalAmount);
 
+        doReturn(initPoint).when(userPointRepository).selectById(id);
+        doReturn(resultPoint).when(userPointRepository).save(id,totalAmount);
+        doReturn(new PointHistory(1L,id,TransactionType.CHARGE, newAmount, System.currentTimeMillis()))
+                .when(pointHistoryService)
+                .save(id,TransactionType.CHARGE,newAmount);
+        //doReturn(resultPoint).when(pointHistoryService).save(id,TransactionType.CHARGE,newAmount);
+
         // when
         // DTO로 만들어?
         UserPointResponseDto chargedUserPoint = userPointService.chargeUserPoint(id,newAmount);
@@ -291,7 +281,11 @@ public class UserPointServiceTest {
 
         UserPoint initPoint = getNewUserPoint(id,initAmount);
         UserPoint resultPoint = getNewUserPoint(id,resAmount);
-
+        doReturn(initPoint).when(userPointRepository).selectById(id);
+        doReturn(resultPoint).when(userPointRepository).save(id,resAmount);
+        doReturn(new PointHistory(1L,id,TransactionType.CHARGE, newAmount, System.currentTimeMillis()))
+                .when(pointHistoryService)
+                .save(id,TransactionType.USE,newAmount);
         // when
         // DTO로 만들어?
         UserPointResponseDto chargedUserPoint = userPointService.useUserPoint(id,newAmount);
@@ -398,6 +392,14 @@ public class UserPointServiceTest {
         CountDownLatch latch = new CountDownLatch(threadCount);
         Long userId = 1L;
 
+
+        userPointRepository = new UserPointRepository(new UserPointTable());
+        pointHistoryService = new PointHistoryService(
+                                    new PointHistoryRepository(new PointHistoryTable())
+                             );
+
+        userPointService = new UserPointService(userPointRepository,pointHistoryService);
+
         userPointService.chargeUserPoint(userId,10000L);
         //when
         for (int i = 0; i < threadCount; i++) {
@@ -406,7 +408,6 @@ public class UserPointServiceTest {
 
                     userPointService.chargeUserPoint(userId,n);
                     n = n + 1;
-                    logger.info("threadLocal [{}]",n);
                 } finally {
                     latch.countDown();
                 }
@@ -414,7 +415,6 @@ public class UserPointServiceTest {
         }
         latch.await();
         UserPointResponseDto result = userPointService.getUserPoint(userId);
-        logger.info("결과 >>> {}", result.getAmount());
 
         //then
         AssertionsForClassTypes.assertThat( result.getAmount()).isEqualTo(10010L);
@@ -432,6 +432,13 @@ public class UserPointServiceTest {
         CountDownLatch latch = new CountDownLatch(threadCount);
         Long userId = 1L;
 
+        userPointRepository = new UserPointRepository(new UserPointTable());
+        pointHistoryService = new PointHistoryService(
+                new PointHistoryRepository(new PointHistoryTable())
+        );
+
+        userPointService = new UserPointService(userPointRepository,pointHistoryService);
+
         userPointService.chargeUserPoint(userId,10000L);
 
         //when
@@ -439,7 +446,6 @@ public class UserPointServiceTest {
             executorService.submit(() -> {
                 try {
 
-                    logger.debug("threadLocal [{}]",n);
                     userPointService.useUserPoint(userId,n);
 
                 } finally {
@@ -449,7 +455,6 @@ public class UserPointServiceTest {
         }
         latch.await();
         UserPointResponseDto result = userPointService.getUserPoint(userId);
-        logger.debug("결과 >>> {}", result.getAmount());
 
         //then
         AssertionsForClassTypes.assertThat( result.getAmount()).isEqualTo(9990);
